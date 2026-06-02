@@ -2,10 +2,30 @@ package app
 
 import (
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 )
+
+// checkDueTodos 检查到期事项并触发通知
+func (m *Model) checkDueTodos(now time.Time) {
+	for _, todo := range m.Todos {
+		if todo.Done() || todo.DueTime() == nil {
+			continue
+		}
+		if now.After(*todo.DueTime()) && now.After(m.LastCheck) {
+			for _, notifier := range m.Notifiers {
+				go func(n Notifier, t TodoItem) {
+					if e := n.Notify(t); e != nil {
+						panic(e)
+					}
+				}(notifier, todo)
+			}
+		}
+	}
+	m.LastCheck = now
+}
 
 // Update 处理消息并更新模型
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -15,6 +35,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Height = msg.Height
 		return m, nil
 
+	case TickMsg:
+		now := time.Time(msg)
+		m.checkDueTodos(now)
+		return m, DoTick() // 继续下一次 tick
 	case tea.KeyMsg:
 		// 正在添加模式：按键由输入框处理
 		if m.Adding {
@@ -22,7 +46,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				text := strings.TrimSpace(m.Input.Value())
 				if text != "" {
-					m.Todos = append(m.Todos, Item{Text: text, Done: false})
+					todo, err := ParseNewTodo(text)
+					if err != nil {
+						panic(err)
+					}
+					m.Todos = append(m.Todos, todo)
 					// 新增后保存
 					_ = m.Save()
 				}
@@ -62,7 +90,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "space":
 			if len(m.Todos) > 0 {
-				m.Todos[m.Cursor].Done = !m.Todos[m.Cursor].Done
+				m.Todos[m.Cursor].Toggle()
 				// 切换状态后保存
 				_ = m.Save()
 			}
@@ -87,5 +115,5 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	return m, nil
+	return m, DoTick()
 }

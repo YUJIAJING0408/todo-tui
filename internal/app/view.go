@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -25,18 +24,10 @@ func (m Model) View() tea.View {
 		b.WriteString("  没有待办事项，按 'a' 添加一个吧～\n")
 	} else {
 		for i, todo := range m.Todos {
-			cursor := " "
-			if m.Cursor == i {
-				cursor = ">"
-			}
-
-			status := "[ ]"
-			if todo.Done {
-				status = "[✓]"
-			}
-
+			// 完成状态
+			text := todo.DisplayText()
 			textStyle := TodoTextStyle
-			if todo.Done {
+			if todo.Done() {
 				textStyle = DoneTextStyle
 			}
 
@@ -44,9 +35,7 @@ func (m Model) View() tea.View {
 			if m.Cursor == i {
 				lineStyle = CursorLineStyle
 			}
-
-			line := fmt.Sprintf("%s %s %s", cursor, status, textStyle.Render(todo.Text))
-			b.WriteString(lineStyle.Render(line) + "\n")
+			b.WriteString(lineStyle.Render(textStyle.Render(text)) + "\n")
 		}
 	}
 

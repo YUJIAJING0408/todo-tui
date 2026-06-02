@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+
 	p := tea.NewProgram(app.NewModel())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("运行出错: %v\n", err)

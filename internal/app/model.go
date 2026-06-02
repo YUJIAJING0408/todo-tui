@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -17,13 +18,16 @@ type Item struct {
 
 // Model 是应用的核心状态
 type Model struct {
-	Todos    []Item
+	Todos    []TodoItem
 	Cursor   int
 	Input    textinput.Model
 	Adding   bool
 	Width    int
 	Height   int
 	Quitting bool
+
+	Notifiers []Notifier // 所有提醒渠道
+	LastCheck time.Time  // 防止重复提醒
 }
 
 const dataFile = ".todo.json"
@@ -32,17 +36,21 @@ const dataFile = ".todo.json"
 func NewModel() Model {
 	ti := textinput.New()
 	ti.Placeholder = "输入新任务..."
-	ti.CharLimit = 80
+	ti.CharLimit = 800
 	ti.Focus()
 
 	return Model{
-		Todos: []Item{
-			{Text: "学习 Go 语言", Done: false},
-			{Text: "写一个 TUI 应用", Done: false},
-			{Text: "喝咖啡 ☕", Done: true},
+		Todos: []TodoItem{
+			&BasicTodo{Title: "学习 Go 语言", DoneFlag: false},
+			&BasicTodo{Title: "写一个 TUI 应用", DoneFlag: false},
+			&BasicTodo{Title: "喝咖啡 ☕", DoneFlag: true},
 		},
 		Input:  ti,
 		Adding: false,
+		Notifiers: []Notifier{
+			&SystemNotifier{},
+		},
+		LastCheck: time.Now(),
 	}
 }
 
@@ -86,5 +94,5 @@ func (m Model) Save() error {
 
 // Init 是 Bubble Tea 的初始化命令
 func (m Model) Init() tea.Cmd {
-	return nil
+	return DoTick()
 }

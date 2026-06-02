@@ -19,4 +19,6 @@ var (
 
 	HelpStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241"))
+
+	MiddleStyle = lipgloss.NewStyle().Width(3).Align(lipgloss.Center)
 )
